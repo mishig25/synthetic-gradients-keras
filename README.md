@@ -4,6 +4,10 @@ Keras as an interface to Tensorflow implementation of Decoupled Neural Interface
 
 Link to the paper:  [https://arxiv.org/abs/1608.05343](https://arxiv.org/abs/1608.05343)
 
+<img src="https://storage.googleapis.com/deepmind-live-cms/documents/3-6.gif" width="200">
+
+GIF demonstrating decoupled learning through synthetic gradients. Source: [DeepMind blog post](https://deepmind.com/blog/decoupled-neural-networks-using-synthetic-gradients/) by Max Jaderberg.
+
 ### Contents:
 - `model.py` 
 - `demo_nb.ipynb` is a Jupyter notebook for demonstrating contents and usage of `model.py`
