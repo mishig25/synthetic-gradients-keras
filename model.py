@@ -1,15 +1,28 @@
 import random
 import tensorflow as tf
 
-from tqdm import tqdm # Used to display training progress bar
+from tqdm import tqdm
 
 from keras import backend as K
 from keras.layers import Dense, BatchNormalization, Activation
 
-sess = tf.Session()
-K.set_session(sess)
 
-class Layer():
+
+class Layer()object:
+    """ Layer class for creating dense layers.
+
+    This class Keras layers as its backbone to create
+    dense layers with BatchNorm and relu activation.
+
+    Attributes:
+        units: An integer number of nodes of a layer.
+        inputs: A tensor that will be input to the layer.
+        name: A string for defintion and tf.scope.
+        out: A boolean indicating whether to add BatchNorm 
+            and relu activation.
+        sg: A boolean indicating whether the layer is for
+            synthetic gradients.
+    """
     
     def __init__(self, units, inputs, name, out=False, sg=False):
         self.name = name
@@ -23,11 +36,19 @@ class Layer():
         self.layer_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,scope=self.name)
 
 
-class ModelSG():
+class ModelSG(object):
+    """Model for demonstraing synthetic gradients.
+
+    A model that uses Keras and Tensorflow to 
+    demonstrate decoupled training through synthetic 
+    gradients on MNIST dataset.
+
+    Attributes:
+        sess: A tf.sess() that will be used by the model.
+    """
     
     def __init__(self, sess):
         self.sess = sess
-        # self.dataset = input_data.read_data_sets("data/", one_hot=True)
         self.dataset = tf.contrib.learn.datasets.mnist.read_data_sets("data/", one_hot=True)
 
         self.lr_div = 10
@@ -36,9 +57,11 @@ class ModelSG():
         self.create_layers()
 
     def create_layers(self):
+        """Creates normal and synthetic layers for the graph
+        """
         # Inputs
-        X = tf.placeholder(tf.float32, shape=(None, 784), name="data") # Input
-        Y = tf.placeholder(tf.float32, shape=(None, 10), name="labels") # Target
+        X = tf.placeholder(tf.float32, shape=(None, 784), name="data")
+        Y = tf.placeholder(tf.float32, shape=(None, 10), name="labels") 
         self.inputs = [X,Y]
 
         # inference
@@ -55,6 +78,18 @@ class ModelSG():
         self.synth_layers = [synth_layer1,synth_layer2,synth_layer3]
     
     def train_layer_n(self, h_m, h_n, d_hat_m, class_loss, next_l, d_n=None, p=True):
+        """Creates computation graphs for decoupled training through 
+            applying synthetic gradients on gradients of the layers.
+        
+            Args:
+                h_m: An integer index of a layer that will be updated.
+                h_n: An integer index of a layer from which grads of `h_m` will be calculated.
+                d_hat_m: An integer index of a synthetic layer that accompanies `h_m`.
+                class_loss: A tensor that contains the prediction loss.
+                next_l: An integer index of a following layer of `h_m`.
+                d_n: An integer index of a synthetic layer whose grads will be applied to grads of `h_m`.
+                p: A boolean indicating whether 
+        """
         if d_n is not None: d_n = self.synth_layers[d_n].output
         if p: h_n = self.layers[h_n].output
         with tf.variable_scope(self.layers[h_m].name):
@@ -68,6 +103,11 @@ class ModelSG():
         return layer_opt, sg_opt
     
     def prepare_training(self, learning_rate):
+        """Creates necessary computation graphs for training.
+
+        Args:
+            learning_rate: A float indicating the initial learning rate.
+        """
         self.learning_rate = tf.Variable(learning_rate, dtype=tf.float32, name="lr")
         self.reduce_lr = tf.assign(self.learning_rate, self.learning_rate/self.lr_div, name="lr_decrease")
 
@@ -84,20 +124,39 @@ class ModelSG():
                     [layer3_opt, sg3_opt],[layer4_opt, sg4_opt]]
 
     def train(self, iterations, batch_size, update_prob, learning_rate):
+        """Trains the model in a decoupled way on a MNIST dataset.
+        
+        Args:
+            iterations: An integer for how many iterations the model will train.
+            batch_size: An integer for the size of the batches.
+            update_prob: A float indicating how often layers should be
+                updated in a decoupled fashion.
+            learning_rate: A float indicating the initial learning rate.
+        """
         self.prepare_training(learning_rate)
         with self.sess.as_default():
             init = tf.global_variables_initializer()
             self.sess.run(init)
             for i in tqdm(range(1,iterations+1)):
-                if i in self.lr_div_steps: self.sess.run(self.reduce_lr) # Decrease learning rate
+                if i in self.lr_div_steps: self.sess.run(self.reduce_lr)
                 
                 data, target = self.dataset.train.next_batch(batch_size)
                 X,Y = self.inputs[0], self.inputs[1]
                 
-                for i in self.decoupled_training: 
-                    if random.random() <= update_prob: self.sess.run(i, feed_dict={X:data,Y:target})
+                for d in self.decoupled_training: 
+                    if random.random() <= update_prob: self.sess.run(d, feed_dict={X:data,Y:target})
+
+                if i % 50000 == 0:
+                    print('Iteration:',i)
+                    self.test(batch_size)
+
     
     def test(self, batch_size):
+        """Tests the model on MNIST.test dataset
+
+        Args:
+            batch_size: An integer for the size of the batches.
+        """
         X,Y = self.inputs[0], self.inputs[1]
         preds = tf.nn.softmax(self.layers[3].output, name="predictions")
         correct_preds = tf.equal(tf.argmax(preds,1), tf.argmax(Y,1), name="correct_predictions")
@@ -111,14 +170,4 @@ class ModelSG():
                 batch_accuracy, batch_loss = self.sess.run([accuracy, self.pred_loss], feed_dict={X:Xb,Y:Yb})
                 test_loss += batch_loss
                 test_accuracy += batch_accuracy
-            print ('Validtion on test sample |','Loss:',test_loss/n_batches,'Accuracy:',test_accuracy/n_batches)
-
-'''
-1. shrink them even more
-2. add validity and tensorboard
-'''
-
-model = ModelSG(sess)
-model.create_layers()
-model.train(500000, 250, 0.2, 3e-5)
-model.test(250)
+            print ('Test Loss:',test_loss/n_batches,'Test Accuracy:',test_accuracy/n_batches)
