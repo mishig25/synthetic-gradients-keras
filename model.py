@@ -7,8 +7,7 @@ from keras import backend as K
 from keras.layers import Dense, BatchNormalization, Activation
 
 
-
-class Layer()object:
+class Layer(object):
     """ Layer class for creating dense layers.
 
     This class Keras layers as its backbone to create
