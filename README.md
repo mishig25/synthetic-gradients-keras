@@ -11,7 +11,7 @@ GIF demonstrating decoupled learning through synthetic gradients. Source: [DeepM
 ### Contents:
 - `main.py` - main function
 - `model.py` - synthetic grads implementation
-- `demo_nb.ipynb` is a Jupyter notebook for demonstrating contents and usage of `model.py`
+- `demo_nb.ipynb` - jupyter notebook for demonstrating contents and usage of `model.py`
 
 ### Prerequisites:
 - Python 3.6
