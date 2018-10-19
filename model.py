@@ -169,4 +169,5 @@ class ModelSG(object):
                 batch_accuracy, batch_loss = self.sess.run([accuracy, self.pred_loss], feed_dict={X:Xb,Y:Yb})
                 test_loss += batch_loss
                 test_accuracy += batch_accuracy
-            print ('Test Loss:',test_loss/n_batches,'Test Accuracy:',test_accuracy/n_batches)
+            print ('Test Loss:',test_loss/n_batches)
+            print('Test Accuracy:', test_accuracy/n_batches)
